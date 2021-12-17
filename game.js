@@ -6,13 +6,16 @@ let canvas = document.getElementById("canvas");
 
 let snake = new PlayerSnake(20, 20, 20);
 
-let cpuSnake = new CpuSnake(100, 100, 20);
+const cpuSnakeList = [];
 
 const appleList = [];
 
-for (let i = 0; i < 10; i++) {
+for (let i = 1; i < 11; i++) {
   let apple = new Apple(snake);
   appleList.push(apple);
+
+  let cpuSnake = new CpuSnake(i * 10, i * 10, 20);
+  cpuSnakeList.push(cpuSnake);
 }
 
 // let apple = new Apple(snake);
@@ -36,12 +39,14 @@ function update() {
   canvasContext.clearRect(0, 0, canvas.width, canvas.height);
 
   snake.move();
-  cpuSnake.move();
   eatApple(snake);
-  eatApple(cpuSnake);
   checkHitWall(snake);
-  checkHitWall(cpuSnake);
-  snakeCollision();
+  cpuSnakeList.map((cpuSnake) => {
+    eatApple(cpuSnake);
+    cpuSnake.move();
+    checkHitWall(cpuSnake);
+  });
+  snakeCollision(cpuSnakeList);
 }
 
 function checkHitWall(snakey) {
@@ -57,33 +62,52 @@ function checkHitWall(snakey) {
   }
 }
 
-function snakeCollision() {
-  let headTail = snake.tail[snake.tail.length - 1];
+function snakeCollision(cpuSnakeList) {
+  cpuSnakeList.map((cpuSnake) => {
+    let headTail = snake.tail[snake.tail.length - 1];
+    let cpuHeadTail = cpuSnake.tail[cpuSnake.tail.length - 1];
 
-  cpuSnake.tail.map((box) => {
-    if (headTail.x == box.x && headTail.y == box.y) {
+    if (
+      headTail.x == cpuHeadTail.x &&
+      headTail.y == cpuHeadTail.y &&
+      snake.score < cpuSnake.score
+    ) {
       snake.tail = [{ x: 20, y: 20 }];
-      while (appleList.length > 10) {
-        appleList.shift();
-      }
+    } else if (
+      headTail.x == cpuHeadTail.x &&
+      headTail.y == cpuHeadTail.y &&
+      snake.score > cpuSnake.score
+    ) {
+      cpuSnake.tail = [{ x: 100, y: 100 }];
     }
-  });
 
-  let cpuHeadTail = cpuSnake.tail[cpuSnake.tail.length - 1];
-
-  let applesToMake = cpuSnake.tail.length;
-  snake.tail.map((box) => {
-    if (cpuHeadTail.x == box.x && cpuHeadTail.y == box.y) {
-      for (let i = 0; i < applesToMake; i++) {
-        if (i % 2 == 0) {
-          let apple = new Apple(cpuSnake);
-          apple.x = box.x + i * 10;
-          apple.y = box.y + i * 10;
-          appleList.push(apple);
+    cpuSnake.tail.map((box, index) => {
+      if (headTail.x == box.x && headTail.y == box.y) {
+        snake.tail = [{ x: 20, y: 20 }];
+        while (appleList.length !== 10) {
+          if (appleList.length > 10) {
+            appleList.shift();
+          } else {
+            appleList.push({ x: index * 10, y: index * 10 });
+          }
         }
-        cpuSnake.tail = [{ x: 100, y: 100 }];
       }
-    }
+    });
+
+    let applesToMake = cpuSnake.tail.length;
+    snake.tail.map((box) => {
+      if (cpuHeadTail.x == box.x && cpuHeadTail.y == box.y) {
+        for (let i = 0; i < applesToMake; i++) {
+          if (i % 2 == 0) {
+            let apple = new Apple(cpuSnake);
+            apple.x = box.x + i * 10;
+            apple.y = box.y + i * 10;
+            appleList.push(apple);
+          }
+          cpuSnake.tail = [{ x: 100, y: 100 }];
+        }
+      }
+    });
   });
 }
 
@@ -98,6 +122,7 @@ function eatApple(snake) {
         Math.floor((Math.random() * canvas.width) / snake.size) * snake.size;
       apple.y =
         Math.floor((Math.random() * canvas.height) / snake.size) * snake.size;
+      snake.score += 1;
     }
   });
 }
@@ -115,15 +140,17 @@ function draw() {
     );
   }
 
-  for (let i = 0; i < cpuSnake.tail.length; i++) {
-    createRect(
-      cpuSnake.tail[i].x + 2.5,
-      cpuSnake.tail[i].y + 2.5,
-      cpuSnake.size - 5,
-      cpuSnake.size - 5,
-      "blue"
-    );
-  }
+  cpuSnakeList.map((cpuSnake) => {
+    for (let i = 0; i < cpuSnake.tail.length; i++) {
+      createRect(
+        cpuSnake.tail[i].x + 2.5,
+        cpuSnake.tail[i].y + 2.5,
+        cpuSnake.size - 5,
+        cpuSnake.size - 5,
+        "blue"
+      );
+    }
+  });
 
   canvasContext.font = "20px Arial";
   canvasContext.fillStyle = "#00FF42";
@@ -161,6 +188,10 @@ window.addEventListener("keydown", (event) => {
   }, 1);
 });
 
-setInterval(() => {
-  cpuSnake.changeDirection();
-}, 4000);
+cpuSnakeList.map((cpuSnake, index) => {
+  let randumNum = (index + 1) * 1000;
+
+  setInterval(() => {
+    cpuSnake.changeDirection();
+  }, randumNum);
+});
